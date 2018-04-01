@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <iostream>
 #include <cmath>
 #include <string>
@@ -121,11 +120,35 @@ int main() {
                 x0, SCREEN_HEIGHT / 2,
                 SCREEN_WIDTH - PADDING, SCREEN_HEIGHT / 2
         );
-        drawCircle(renderer, x0 + 100, SCREEN_HEIGHT / 2, 3);
-        drawText(renderer, helpFont, "1", textColor, x0 + 100, SCREEN_HEIGHT / 2 + 5, "center");
-        drawCircle(renderer, x0 + 200, SCREEN_HEIGHT / 2, 3);
-        drawText(renderer, helpFont, "2", textColor, x0 + 200, SCREEN_HEIGHT / 2 + 5, "center");
-        drawText(renderer, helpFont, "Час", textColor, SCREEN_WIDTH - PADDING, SCREEN_HEIGHT / 2 + 5, "center");
+        int lastSeconds;
+        int lastSecondsPosition;
+        if (time / interval < L * 2) {
+            lastSeconds = 3;
+            lastSecondsPosition = x0 + lastSeconds * 100;
+        } else {
+            lastSeconds = time / 1000;
+            lastSecondsPosition = x0 + L * 2 + (time % 2) / 10 - (time % 1000) / 10;
+        }
+
+        if (lastSecondsPosition + 100 <= SCREEN_WIDTH - PADDING) {
+            drawCircle(renderer, lastSecondsPosition + 100, SCREEN_HEIGHT / 2, 3);
+            sprintf(text, "%d", lastSeconds + 1);
+            drawText(renderer, helpFont, text, textColor, lastSecondsPosition + 100, SCREEN_HEIGHT / 2 + 5, "center");
+        }
+
+        drawCircle(renderer, lastSecondsPosition, SCREEN_HEIGHT / 2, 3);
+        sprintf(text, "%d", lastSeconds);
+        drawText(renderer, helpFont, text, textColor, lastSecondsPosition, SCREEN_HEIGHT / 2 + 5, "center");
+
+        drawCircle(renderer, lastSecondsPosition - 100, SCREEN_HEIGHT / 2, 3);
+        sprintf(text, "%d", lastSeconds - 1);
+        drawText(renderer, helpFont, text, textColor, lastSecondsPosition - 100, SCREEN_HEIGHT / 2 + 5, "center");
+
+        drawCircle(renderer, lastSecondsPosition - 200, SCREEN_HEIGHT / 2, 3);
+        sprintf(text, "%d", lastSeconds - 2);
+        drawText(renderer, helpFont, text, textColor, lastSecondsPosition - 200, SCREEN_HEIGHT / 2 + 5, "center");
+
+        drawText(renderer, helpFont, "Час", textColor, SCREEN_WIDTH - PADDING, SCREEN_HEIGHT / 2 - 40, "center");
 
         // Draw the deviation axis for graph
         SDL_RenderDrawLine(
