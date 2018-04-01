@@ -3,11 +3,11 @@ project(course_work)
 
 set(CMAKE_CXX_STANDARD 11)
 
-# includes cmake/FindSDL2.cmake
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(SDL2 REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR})
-include_directories(${PROJECT_SOURCE_DIR}/include)
+find_package(SDL2_ttf REQUIRED)
+include_directories(${SDL2_INCLUDE_DIR}
+        ${SDL2_TTF_INCLUDE_DIR})
 
 add_executable(course_work main.cpp)
-target_link_libraries(course_work ${SDL2_LIBRARY})
+target_link_libraries(course_work ${SDL2_LIBRARY} ${SDL2_TTF_LIBRARIES})
