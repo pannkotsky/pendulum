@@ -7,8 +7,6 @@
 
 using namespace std;
 
-#define PI 3.14159265
-
 const int SCREEN_WIDTH  = 960;
 const int SCREEN_HEIGHT = 720;
 const int PADDING = SCREEN_WIDTH / 24;
@@ -18,8 +16,8 @@ const int L = SCREEN_WIDTH / 4 - PADDING * 2; // length of the pendulum
 const double MASS_MIN = 10.0; // min mass of the body
 const double MASS_MAX = 30.0; // max mass of the body
 
-const double DEV_MIN = - PI / 2; // min deviation in radians
-const double DEV_MAX = PI / 2; // max deviation in radians
+const double DEV_MIN = - M_PI / 2; // min deviation in radians
+const double DEV_MAX = M_PI / 2; // max deviation in radians
 
 const double STIFFNESS_MIN = 1.0;
 const double STIFFNESS_MAX = 5.0;
@@ -261,7 +259,7 @@ void logSDLError(const string &msg){
 void drawCircle(SDL_Renderer *renderer, double cx, double cy, double radius) {
     double xpos, ypos;
     double angle_inc = 1.0f / radius;
-    for (double angle = 0.0f; angle <= PI * 2; angle += angle_inc) {
+    for (double angle = 0.0f; angle <= M_PI * 2; angle += angle_inc) {
         xpos = cx + radius * cos(angle);
         ypos = cy + radius * sin(angle);
         SDL_RenderDrawPoint(renderer, xpos, ypos);
