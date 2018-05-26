@@ -30,7 +30,7 @@ const int HANG_POINT[] = {SCREEN_WIDTH / 4, SCREEN_HEIGHT / 2};
 void logSDLError(const string &msg);
 void drawCircle(SDL_Renderer *renderer, double cx, double cy, double radius);
 void drawPendulum(SDL_Renderer *renderer, double dev, double mass, double stiff);
-void drawText(SDL_Renderer *renderer, TTF_Font *font, char *text, SDL_Color textColor, int x, int y, string alignX);
+void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color textColor, int x, int y, const string alignX);
 
 
 int main() {
@@ -78,7 +78,7 @@ int main() {
 
     int time = 0;
     double devInit = -1.0; // initial deviation
-    double dev;
+    double dev = devInit;
     double mass = (MASS_MAX + MASS_MIN) / 2;
     double stiff = (STIFFNESS_MAX + STIFFNESS_MIN) / 2;
     deque<double> lastPoints;
@@ -104,7 +104,7 @@ int main() {
         currentColor = activeParam == 2 ? activeTextColor : textColor;
         drawText(renderer, font, text, currentColor, SCREEN_WIDTH * 5 / 6, PADDING, "center");
 
-        char *helpText = "Використовуйте клавіші стрілок для зміни параметрів";
+        const char *helpText = "Використовуйте клавіші стрілок для зміни параметрів";
         drawText(renderer, helpFont, helpText, textColor, SCREEN_WIDTH / 2, 100, "center");
 
         sprintf(text, "Час: %d", time / 1000);
@@ -292,7 +292,7 @@ void drawPendulum(SDL_Renderer *renderer, double dev, double mass, double stiff)
 }
 
 
-void drawText(SDL_Renderer *renderer, TTF_Font *font, char *text, SDL_Color textColor, int x, int y, string alignX) {
+void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color textColor, int x, int y, const string alignX) {
     SDL_Surface* surfaceMessage = TTF_RenderUTF8_Blended(font, text, textColor);
     SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
     SDL_Rect Message_rect;
@@ -303,7 +303,7 @@ void drawText(SDL_Renderer *renderer, TTF_Font *font, char *text, SDL_Color text
     Message_rect.y = y;
     Message_rect.w = textWidth;
     Message_rect.h = textHeigth;
-    SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+    SDL_RenderCopy(renderer, Message, nullptr, &Message_rect);
     SDL_DestroyTexture(Message);
     SDL_FreeSurface(surfaceMessage);
 }
