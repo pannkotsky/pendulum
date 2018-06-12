@@ -7,83 +7,63 @@
 
 using namespace std;
 
-const int SCREEN_WIDTH  = 960;
-const int SCREEN_HEIGHT = 720;
-const int PADDING = SCREEN_WIDTH / 24;
-
-const int L = SCREEN_HEIGHT / 4 - PADDING; // максимальне відхилення для цілей виведення на екран
-
+// визначення констант
+const int SCREEN_WIDTH  = 960; // ширина екрану
+const int SCREEN_HEIGHT = 720; // висота екрану
+const int PADDING = SCREEN_WIDTH / 24; // відступ від краю екрану
 const double MASS_MIN = 5.0; // мінімальна маса тіла
 const double MASS_MAX = 10.0; // максимальна маса тіла
-
-const double DEV_MIN = - 7; // мінімальне відхилення
-const double DEV_MAX = 7; // максимальне відхилення
-
+const double DEV_MIN = - 7.0; // мінімальне відхилення
+const double DEV_MAX = 7.0; // максимальне відхилення
 const double STIFFNESS_MIN = 20.0; // мінімальне значення коефіцієнту жорсткості
 const double STIFFNESS_MAX = 80.0; // максимальне значення коефіцієнту жорсткості
-
-// координати точки підвісу
-const int HANG_POINT[] = {SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4 - 60};
-
-const int GRAPH_WIDTH = SCREEN_WIDTH / 2 - PADDING * 4;
+const int L = SCREEN_HEIGHT / 4 - PADDING; // максимальне відхилення для цілей виведення на екран
+const int HANG_POINT[] = {SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4 - 60}; // координати точки підвісу
+const int GRAPH_WIDTH = SCREEN_WIDTH / 2 - PADDING * 4; // область графіка, де будується синусоїда
 
 
-void logSDLError(const string &msg);
+SDL_Window *initGraphics();
+void tearDownGraphics(SDL_Window *window, SDL_Renderer *renderer);
+
+double calcDeviation(double devInit, double mass, double stiff, double time);
+double calcPeriod(double mass, double stiff);
+double calcFrequency(double period);
+
 void drawCircle(SDL_Renderer *renderer, double cx, double cy, double radius);
-void drawSpringPendulum(SDL_Renderer *renderer, double dev, double mass, double stiff);
+void drawPendulum(SDL_Renderer *renderer, double dev, double mass, double stiff);
 void drawText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color textColor, int x, int y, const string alignX);
 
 
 int main() {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-        logSDLError("SDL_Init");
-        return 1;
-    }
-
-    if (TTF_Init() < 0) {
-        logSDLError("TTF_Init");
-        return 1;
-    }
-
-    SDL_Window *window = SDL_CreateWindow("Маятник", 100, 100, SCREEN_WIDTH,
-                                          SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-    if (window == nullptr){
-        logSDLError("CreateWindow");
-        SDL_Quit();
-        return 1;
-    }
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1,
-                                                SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (renderer == nullptr){
-        logSDLError("CreateRenderer");
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_bool done = SDL_FALSE;
-    SDL_Event event;
-
-    Uint32 interval = 10;
+    // ініціалізація графічної оболонки
+    SDL_Window *window = initGraphics();
+    if (window == nullptr) return EXIT_FAILURE;
+    SDL_Renderer *renderer = SDL_GetRenderer(window);
     TTF_Font* font = TTF_OpenFont("../fonts/OpenSans.ttf", 32);
     TTF_Font* helpFont = TTF_OpenFont("../fonts/OpenSans.ttf", 20);
     if (font == nullptr || helpFont == nullptr) {
         cerr << "Error: font not found" << endl;
         TTF_Quit();
         SDL_Quit();
-        return 1;
+        return EXIT_FAILURE;
     }
+
+    SDL_bool done = SDL_FALSE;
+    SDL_Event event;
+    Uint32 interval = 10;
     SDL_Color textColor = {255, 255, 255};
     SDL_Color activeTextColor = {255, 255, 0};
     SDL_Color currentColor;
-
     int time = 0;
-    double devInit = -5.0; // initial deviation
+    double devInit = -5.0; // початкове відхилення
     double dev = devInit;
-    double mass = (MASS_MAX + MASS_MIN) / 2;
-    double stiff = (STIFFNESS_MAX + STIFFNESS_MIN) / 2;
-    deque<double> lastPoints;
-    int activeParam = 0;
+    double mass = (MASS_MAX + MASS_MIN) / 2; // маса за замовчуванням
+    double stiff = (STIFFNESS_MAX + STIFFNESS_MIN) / 2; // жорсткість за замовчуванням
+    deque<double> lastPoints; // масив точок для побудови графіка
+    int activeParam = 0; // індекс пункту меню
+
+    double period = calcPeriod(mass, stiff);
+    double frequency = calcFrequency(period);
 
     while (!done) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -111,17 +91,18 @@ int main() {
 
         sprintf(text, "Час: %d с", time / 1000);
         drawText(renderer, font, text, textColor, SCREEN_WIDTH - PADDING, SCREEN_HEIGHT - PADDING - 80, "right");
-        float period = 2 * M_PI * sqrt(mass / stiff);
+
         sprintf(text, "Період коливань: %.2f с", period);
         drawText(renderer, font, text, textColor, PADDING, SCREEN_HEIGHT - PADDING - 120, "left");
-        sprintf(text, "Частота коливань: %.2f rad/с", 2 * M_PI / period);
+
+        sprintf(text, "Частота коливань: %.2f rad/с", frequency);
         drawText(renderer, font, text, textColor, PADDING, SCREEN_HEIGHT - PADDING - 80, "left");
 
-        // Draw pendulum
-        drawSpringPendulum(renderer, dev, mass, stiff);
+        // малюємо маятник
+        drawPendulum(renderer, dev, mass, stiff);
 
         int x0 = SCREEN_WIDTH / 2 + PADDING;
-        // Draw the time axis for graph
+        // малюємо вісь часу для графіку
         SDL_RenderDrawLine(
                 renderer,
                 x0, SCREEN_HEIGHT / 2,
@@ -157,7 +138,7 @@ int main() {
 
         drawText(renderer, helpFont, "Час, с", textColor, SCREEN_WIDTH - PADDING, SCREEN_HEIGHT / 2 - 40, "center");
 
-        // Draw the deviation axis for graph
+        // малюємо вісь відхилення
         SDL_RenderDrawLine(
                 renderer,
                 SCREEN_WIDTH / 2 + PADDING, SCREEN_HEIGHT / 2 - L - PADDING,
@@ -172,14 +153,14 @@ int main() {
         drawCircle(renderer, x0, SCREEN_HEIGHT / 2 + L, 3);
         drawText(renderer, helpFont, "-7", textColor, x0 - 10, SCREEN_HEIGHT / 2 + L + 5, "right");
 
-        // Calculate deviation
-        dev = devInit * cos(pow(mass / stiff, -0.5) * (time * 0.01 / interval));
+        // обчислюємо відхилення
+        dev = calcDeviation(devInit, mass, stiff, time * 0.01 / interval);
         lastPoints.push_back(dev);
         if (lastPoints.size() > GRAPH_WIDTH) {
             lastPoints.pop_front();
         }
 
-        // Draw the graph curve
+        // малюємо синусоїду коливань
         double graphStartX = SCREEN_WIDTH / 2 + PADDING;
         double graphstartY = SCREEN_HEIGHT / 2;
         double graphX = graphStartX;
@@ -204,12 +185,16 @@ int main() {
                         if (mass < MASS_MAX) {
                             mass += 0.5;
                             time = 0;
+                            period = calcPeriod(mass, stiff);
+                            frequency = calcFrequency(period);
                             lastPoints.clear();
                         }
                     } else if (activeParam == 1) {
                         if (stiff < STIFFNESS_MAX) {
                             stiff += 5;
                             time = 0;
+                            period = calcPeriod(mass, stiff);
+                            frequency = calcFrequency(period);
                             lastPoints.clear();
                         }
                     } else if (activeParam == 2) {
@@ -224,12 +209,16 @@ int main() {
                         if (mass > MASS_MIN) {
                             mass -= 0.5;
                             time = 0;
+                            period = calcPeriod(mass, stiff);
+                            frequency = calcFrequency(period);
                             lastPoints.clear();
                         }
                     } else if (activeParam == 1) {
                         if (stiff > STIFFNESS_MIN) {
                             stiff -= 5;
                             time = 0;
+                            period = calcPeriod(mass, stiff);
+                            frequency = calcFrequency(period);
                             lastPoints.clear();
                         }
                     } else if (activeParam == 2) {
@@ -247,21 +236,66 @@ int main() {
         SDL_Delay(interval);
     }
 
+    tearDownGraphics(window, renderer);
+    return EXIT_SUCCESS;
+}
+
+
+void logSDLError(const string &msg){
+    cerr << msg << " error: " << SDL_GetError() << endl;
+}
+
+
+SDL_Window *initGraphics() {
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        logSDLError("SDL_Init");
+        return nullptr;
+    }
+
+    if (TTF_Init() < 0) {
+        logSDLError("TTF_Init");
+        return nullptr;
+    }
+
+    SDL_Window *window = SDL_CreateWindow("Маятник", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    if (window == nullptr){
+        logSDLError("CreateWindow");
+        SDL_Quit();
+        return nullptr;
+    }
+
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == nullptr){
+        logSDLError("CreateRenderer");
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return nullptr;
+    }
+
+    return window;
+}
+
+
+void tearDownGraphics(SDL_Window *window, SDL_Renderer *renderer) {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     TTF_Quit();
     SDL_Quit();
-    return 0;
 }
 
 
-/**
-* Log an SDL error with some error message to the output stream of our choice
-* @param os The output stream to write the message to
-* @param msg The error message to write, format will be msg error: SDL_GetError()
-*/
-void logSDLError(const string &msg){
-    cerr << msg << " error: " << SDL_GetError() << endl;
+double calcDeviation(double devInit, double mass, double stiff, double time) {
+    return devInit * cos(sqrt(stiff / mass) * time);
+}
+
+
+double calcPeriod(double mass, double stiff) {
+    return 2 * M_PI * sqrt(mass / stiff);
+}
+
+
+double calcFrequency(double period) {
+    return 2 * M_PI / period;
 }
 
 
@@ -276,7 +310,7 @@ void drawCircle(SDL_Renderer *renderer, double cx, double cy, double radius) {
 }
 
 
-void drawSpringPendulum(SDL_Renderer *renderer, double dev, double mass, double stiff) {
+void drawPendulum(SDL_Renderer *renderer, double dev, double mass, double stiff) {
     int hangPointRadius = 5;
     // величина відхилення для виведення на екран
     double devDisplay = L * dev / DEV_MAX;
